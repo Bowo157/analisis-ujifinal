@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Analisis Data</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Aplikasi Analisis Data</h1>
+        
+        <div id="step1" class="mb-8">
+            <h2 class="text-2xl font-semibold mb-2">Langkah 1: Input Data</h2>
+            <div class="mb-4">
+                <h3 class="text-xl mb-2">Unggah File</h3>
+                <input type="file" id="fileInput" class="mb-2" accept=".csv, .xlsx, .xls">
+                <button onclick="uploadFile()" class="bg-blue-500 text-white px-4 py-2 rounded">Unggah</button>
+            </div>
+            <div>
+                <h3 class="text-xl mb-2">Input Manual</h3>
+                <button onclick="showManualInputForm()" class="bg-green-500 text-white px-4 py-2 rounded">Masukkan Data Manual</button>
+            </div>
+        </div>
+
+        <div id="manualInputContainer" class="hidden">
+            <div id="manualInputForm" class="mb-4">
+                <h3 class="text-xl mb-2">Input Data Manual</h3>
+                <div id="columnInputs" class="mb-4">
+                    <div class="flex mb-2">
+                        <input type="text" placeholder="Nama Kolom" class="columnName p-2 border rounded mr-2">
+                        <select class="columnType p-2 border rounded">
+                            <option value="text">Teks</option>
+                            <option value="number">Angka</option>
+                            <option value="date">Tanggal</option>
+                        </select>
+                        <button onclick="addColumn()" class="bg-green-500 text-white px-4 py-2 rounded ml-2">Tambah Kolom</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border">
+                        <tbody id="dataRows" class="bg-white"></tbody>
+                    </table>
+                </div>
+                <div class="mt-4">
+                    <button onclick="addRow()" class="bg-blue-500 text-white px-4 py-2 rounded">Tambah Baris</button>
+                    <button onclick="submitManualData()" class="bg-green-500 text-white px-4 py-2 rounded ml-2">Kirim Data</button>
+                </div>
+            </div>
+        </div>
+
+    <script>
+        // Initialize all event listeners when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show Manual Input Form button
+            const showManualInputButton = document.querySelector('button[onclick="showManualInputForm()"]');
+            if (showManualInputButton) {
+                showManualInputButton.removeAttribute('onclick');
+                showManualInputButton.addEventListener('click', showManualInputForm);
+                console.log('Event listener added to Show Manual Input Form button');
+            }
+
+            // Add Column button
+            const addColumnButton = document.querySelector('#columnInputs button');
+            if (addColumnButton) {
+                addColumnButton.removeAttribute('onclick');
+                addColumnButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    addColumn();
+                });
+                console.log('Event listener added to Add Column button');
+            }
+
+            // Add Row button
+            const addRowButton = document.querySelector('button[onclick="addRow()"]');
+            if (addRowButton) {
+                addRowButton.removeAttribute('onclick');
+                addRowButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    addRow();
+                });
+                console.log('Event listener added to Add Row button');
+            }
+
+            // Submit Data button
+            const submitDataButton = document.querySelector('button[onclick="submitManualData()"]');
+            if (submitDataButton) {
+                submitDataButton.removeAttribute('onclick');
+                submitDataButton.addEventListener('click', submitManualData);
+                console.log('Event listener added to Submit Data button');
+            }
+        });
+
+        function showManualInputForm() {
+            console.log('showManualInputForm called');
+            const manualInputContainer = document.getElementById('manualInputContainer');
+            manualInputContainer.classList.remove('hidden');
+            manualInputContainer.style.display = 'block';
+            console.log('Manual input form should now be visible');
+        }
+
+        function addColumn() {
+            console.log('addColumn function called');
+            const columnName = document.querySelector('.columnName').value;
+            const columnType = document.querySelector('.columnType').value;
+            
+            if (columnName) {
+                const dataRows = document.getElementById('dataRows');
+                let headerRow = dataRows.querySelector('.header');
+                
+                if (!headerRow) {
+                    headerRow = document.createElement('tr');
+                    headerRow.className = 'header';
+                    dataRows.appendChild(headerRow);
+                }
+                
+                // Add header cell with improved styling
+                headerRow.insertAdjacentHTML('beforeend', `<th class="p-2 border bg-gray-100 font-semibold">${columnName}</th>`);
+                
+                // Add cells to existing rows
+                const rows = dataRows.querySelectorAll('.dataRow');
+                rows.forEach(row => {
+                    row.insertAdjacentHTML('beforeend', `
+                        <td class="border">
+                            <input type="${columnType === 'number' ? 'number' : 'text'}" 
+                                   class="w-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   ${columnType === 'number' ? 'step="any"' : ''}>
+                        </td>
+                    `);
+                });
+                
+                // If no rows exist, create the first row
+                if (rows.length === 0) {
+                    addRow();
+                }
+                
+                // Clear the input field after adding a column
+                document.querySelector('.columnName').value = '';
+                console.log('Column added:', columnName, columnType);
+            } else {
+                console.log('Column name is empty');
+                alert('Please enter a column name');
+            }
+        }
+
+        function addRow() {
+            console.log('addRow function called');
+            const dataRows = document.getElementById('dataRows');
+            const columnCount = dataRows.querySelector('.header') ? dataRows.querySelector('.header').children.length : 0;
+            
+            const dataRows = document.getElementById('dataRows');
+            const headers = Array.from(dataRows.querySelector('.header').children).map(th => th.textContent);
+            const rows = Array.from(dataRows.querySelectorAll('.dataRow'));
+            const data = rows.map(row => {
+                const rowData = {};
+                Array.from(row.children).forEach((cell, index) => {
+                    rowData[headers[index]] = cell.querySelector('input').value;
+                });
+                return rowData;
+            });
+            const dtypes = {};
+            document.querySelectorAll('.columnType').forEach((select, index) => {
+                dtypes[headers[index]] = select.value;
+            });
+
+            axios.post('/manual_input', { data, dtypes })
+                .then(response => {
+                    if (response.data.success) {
+                        alert('Data berhasil dikirim');
+                        columns = response.data.columns;
+                        showStep2();
+                    } else {
+                        alert('Error: ' + response.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat mengirim data');
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('button[onclick="showManualInputForm()"]').addEventListener('click', showManualInputForm);
+        });
+    </script>
+
+        <div id="step2" class="mb-8 hidden">
+            <h2 class="text-2xl font-semibold mb-2">Langkah 2: Analisis Data</h2>
+            <select id="analysisType" class="mb-2 p-2 border rounded">
+                <option value="descriptive">Statistik Deskriptif</option>
+                <option value="t_test">Uji T</option>
+                <option value="correlation">Korelasi</option>
+                <option value="regression">Regresi</option>
+            </select>
+            <div id="columnSelection"></div>
+            <button onclick="runAnalysis()" class="bg-blue-500 text-white px-4 py-2 rounded">Jalankan Analisis</button>
+        </div>
+
+        <div id="step3" class="mb-8 hidden">
+            <h2 class="text-2xl font-semibold mb-2">Langkah 3: Visualisasi Data</h2>
+            <select id="vizType" class="mb-2 p-2 border rounded">
+                <option value="scatter">Diagram Pencar</option>
+                <option value="bar">Diagram Batang</option>
+                <option value="histogram">Histogram</option>
+            </select>
+            <div id="vizColumnSelection"></div>
+            <button onclick="createVisualization()" class="bg-blue-500 text-white px-4 py-2 rounded">Buat Visualisasi</button>
+        </div>
+
+        <div id="results" class="hidden">
+            <h2 class="text-2xl font-semibold mb-2">Hasil</h2>
+            <div id="analysisResults"></div>
+            <div id="visualizationResults"></div>
+        </div>
+    </div>
+
+    <script>
+        let columns = [];
+
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            axios.post('/upload', formData)
+                .then(response => {
+                    if (response.data.success) {
+                        alert('File berhasil diunggah');
+                        columns = response.data.columns;
+                        showStep2();
+                    } else {
+                        alert('Error: ' + response.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat mengunggah file');
+                });
+        }
+
+        function showManualInputForm() {
+            console.log('showManualInputForm called');
+            const manualInputContainer = document.getElementById('manualInputContainer');
+            manualInputContainer.classList.remove('hidden');
+            manualInputContainer.style.display = 'block';
+            console.log('Manual input form should now be visible');
+        }
+
+        function addColumn() {
+            console.log('addColumn function called');
+            const columnName = document.querySelector('.columnName').value;
+            const columnType = document.querySelector('.columnType').value;
+            if (columnName) {
+                const dataRows = document.getElementById('dataRows');
+                let headerRow = dataRows.querySelector('.header');
+                if (!headerRow) {
+                    headerRow = document.createElement('tr');
+                    headerRow.className = 'header';
+                    dataRows.appendChild(headerRow);
+                }
+                headerRow.insertAdjacentHTML('beforeend', `<th class="p-2 border">${columnName}</th>`);
+                
+                const rows = dataRows.querySelectorAll('.dataRow');
+                rows.forEach(row => {
+                    row.insertAdjacentHTML('beforeend', `<td><input type="${columnType === 'number' ? 'number' : 'text'}" class="p-2 border rounded"></td>`);
+                });
+                
+                if (rows.length === 0) {
+                    addRow();
+                }
+                
+                // Clear the input field after adding a column
+                document.querySelector('.columnName').value = '';
+
+                console.log('Column added:', columnName, columnType);
+            } else {
+                console.log('Column name is empty');
+            }
+            // Force a redraw of the table
+            const table = document.getElementById('dataRows');
+            table.style.display = 'none';
+            table.offsetHeight; // This line forces a redraw
+            table.style.display = '';
+        }
+
+        // Ensure the event listener is added after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const addColumnButton = document.querySelector('#manualInputForm button.bg-green-500');
+            if (addColumnButton) {
+                addColumnButton.removeAttribute('onclick');
+                addColumnButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    console.log('Add Column button clicked');
+                    addColumn();
+                });
+                console.log('Event listener added to Add Column button');
+            } else {
+                console.log('Add Column button not found');
+            }
+        });
+
+        function addRow() {
+            console.log('addRow function called');
+            const dataRows = document.getElementById('dataRows');
+            const columnCount = dataRows.querySelector('.header') ? dataRows.querySelector('.header').children.length : 0;
+            if (columnCount > 0) {
+                const newRow = document.createElement('tr');
+                newRow.className = 'dataRow';
+                for (let i = 0; i < columnCount; i++) {
+                    const cell = document.createElement('td');
+                    const input = document.createElement('input');
+                    input.className = 'p-2 border rounded';
+                    const columnType = document.querySelectorAll('.columnType')[i].value;
+                    input.type = columnType === 'number' ? 'number' : 'text';
+                    cell.appendChild(input);
+                    newRow.appendChild(cell);
+                }
+                dataRows.appendChild(newRow);
+                console.log('Row added');
+            } else {
+                console.log('No columns defined yet');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded');
+
+            const showManualInputButton = document.querySelector('button[onclick="showManualInputForm()"]');
+            if (showManualInputButton) {
+                showManualInputButton.removeAttribute('onclick');
+                showManualInputButton.addEventListener('click', showManualInputForm);
+                console.log('Event listener added to Show Manual Input Form button');
+            } else {
+                console.log('Show Manual Input Form button not found');
+            }
+
+            const addColumnButton = document.querySelector('#manualInputForm button.bg-green-500');
+            if (addColumnButton) {
+                addColumnButton.removeAttribute('onclick');
+                addColumnButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    addColumn();
+                });
+                console.log('Event listener added to Add Column button');
+            } else {
+                console.log('Add Column button not found');
+            }
+
+            const addRowButton = document.querySelector('#manualInputForm button.bg-blue-500');
+            if (addRowButton) {
+                addRowButton.removeAttribute('onclick');
+                addRowButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    addRow();
+                });
+                console.log('Event listener added to Add Row button');
+            } else {
+                console.log('Add Row button not found');
+            }
+
+            const submitDataButton = document.querySelector('#manualInputForm button:last-child');
+            if (submitDataButton) {
+                submitDataButton.removeAttribute('onclick');
+                submitDataButton.addEventListener('click', submitManualData);
+                console.log('Event listener added to Submit Data button');
+            } else {
+                console.log('Submit Data button not found');
+            }
+        });
+
+        function submitManualData() {
+            const dataRows = document.getElementById('dataRows');
+            const headers = Array.from(dataRows.querySelector('.header').children).map(th => th.textContent);
+            const rows = Array.from(dataRows.querySelectorAll('.dataRow'));
+            const data = rows.map(row => {
+                const rowData = {};
+                Array.from(row.children).forEach((cell, index) => {
+                    rowData[headers[index]] = cell.querySelector('input').value;
+                });
+                return rowData;
+            });
+            const dtypes = {};
+            document.querySelectorAll('.columnType').forEach((select, index) => {
+                dtypes[headers[index]] = select.value;
+            });
+
+            axios.post('/manual_input', { data, dtypes })
+                .then(response => {
+                    if (response.data.success) {
+                        alert('Data berhasil dikirim');
+                        columns = response.data.columns;
+                        showStep2();
+                    } else {
+                        alert('Error: ' + response.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat mengirim data');
+                });
+        }
+
+        function showStep2() {
+            document.getElementById('step2').classList.remove('hidden');
+            updateColumnSelection();
+        }
+
+        function updateColumnSelection() {
+            const columnSelection = document.getElementById('columnSelection');
+            columnSelection.innerHTML = '';
+            columns.forEach(column => {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = column;
+                checkbox.name = 'columns';
+                checkbox.value = column;
+                const label = document.createElement('label');
+                label.htmlFor = column;
+                label.textContent = column;
+                columnSelection.appendChild(checkbox);
+                columnSelection.appendChild(label);
+                columnSelection.appendChild(document.createElement('br'));
+            });
+        }
+
+        function runAnalysis() {
+            const analysisType = document.getElementById('analysisType').value;
+            const selectedColumns = Array.from(document.querySelectorAll('input[name="columns"]:checked')).map(el => el.value);
+
+            axios.post('/analyze', {
+                analysis_type: analysisType,
+                columns: selectedColumns
+            })
+            .then(response => {
+                if (response.data.result) {
+                    displayResults(response.data.result);
+                    showStep3();
+                } else {
+                    alert('Error: ' + response.data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat menjalankan analisis');
+            });
+        }
+
+        function showStep3() {
+            document.getElementById('step3').classList.remove('hidden');
+            updateVizColumnSelection();
+        }
+
+        function updateVizColumnSelection() {
+            const vizColumnSelection = document.getElementById('vizColumnSelection');
+            vizColumnSelection.innerHTML = '';
+            columns.forEach(column => {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = 'viz_' + column;
+                checkbox.name = 'viz_columns';
+                checkbox.value = column;
+                const label = document.createElement('label');
+                label.htmlFor = 'viz_' + column;
+                label.textContent = column;
+                vizColumnSelection.appendChild(checkbox);
+                vizColumnSelection.appendChild(label);
+                vizColumnSelection.appendChild(document.createElement('br'));
+            });
+        }
+
+        function createVisualization() {
+            const vizType = document.getElementById('vizType').value;
+            const selectedColumns = Array.from(document.querySelectorAll('input[name="viz_columns"]:checked')).map(el => el.value);
+
+            axios.post('/visualize', {
+                viz_type: vizType,
+                columns: selectedColumns
+            })
+            .then(response => {
+                if (response.data.plot) {
+                    displayVisualization(response.data.plot);
+                } else {
+                    alert('Error: ' + response.data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat membuat visualisasi');
+            });
+        }
+
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            const analysisResultsDiv = document.getElementById('analysisResults');
+            resultsDiv.classList.remove('hidden');
+            analysisResultsDiv.innerHTML = '<pre>' + JSON.stringify(results, null, 2) + '</pre>';
+        }
+
+        function displayVisualization(plotUrl) {
+            const resultsDiv = document.getElementById('results');
+            const visualizationResultsDiv = document.getElementById('visualizationResults');
+            resultsDiv.classList.remove('hidden');
+            visualizationResultsDiv.innerHTML = '<img src="data:image/png;base64,' + plotUrl + '" />';
+        }
+    </script>
+</body>
+</html>

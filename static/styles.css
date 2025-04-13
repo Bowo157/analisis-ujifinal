@@ -1,0 +1,43 @@
+/* styles.css */
+body {
+    background-color: #1a202c; /* Dark background */
+    color: #ffffff; /* White text */
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+}
+
+h1, h2, h3 {
+    color: #f7fafc; /* Light color for headings */
+}
+
+button {
+    background-color: #2b6cb0; /* Button color */
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #3182ce; /* Button hover color */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #4a5568; /* Border color */
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #2d3748; /* Header background */
+}
