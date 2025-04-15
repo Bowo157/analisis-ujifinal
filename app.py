@@ -45,7 +45,7 @@ def upload_file():
             
             session['data'] = df.to_json()
             app.logger.info("File uploaded successfully with columns: %s", df.columns.tolist())
-            return jsonify({'success': 'File uploaded successfully', 'columns': df.columns.tolist()})
+            return jsonify({'success': 'File uploaded successfully', 'columns': df.columns.tolist(), 'data': df.to_dict(orient='records')})
         except Exception as e:
             app.logger.error("Error processing file: %s", str(e))
             return jsonify({'error': f'Error processing file: {str(e)}'})
